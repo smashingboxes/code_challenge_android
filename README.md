@@ -13,7 +13,7 @@ The basic application will consist of the following workflow:
 
 On the initial application startup, if assets/item.csv hasn't been parsed out and stored into a database, run a routine to do so -- all interaction with the database should be through the ContentProvider.  If the user minimizes or closes the application, this routine should still continue until finished.  When finished, if the user is currently viewing the application, a list should be populated with all results (i.e. an empty query should display all items).  Once results are present, a menu item should be displayed to allow the user to provide a search query that will filter the list of displayed results by dispatching an additional query.
 
-Feel free to use as many classes/nested classes as you find necessary to come to a solution.  While the need for a library project is likely unnecessary, if you'd like to use one please contact me austin@smashingboxes.com so I can approve the library first.  While it is unlikely that I'll disallow the use of a library project, this will allow me to be sure that the purpose of this challenge isn't defeated by its use.
+Feel free to use as many classes/nested classes as you find necessary to come to a solution.  While the need for a library project is likely unnecessary, if you'd like to use one please contact me at austin@smashingboxes.com so I can approve the library first.  While it is unlikely that I'll disallow the use of a library project, this will allow me to be sure that the purpose of this challenge isn't defeated by its use.
 
 
 ## Ideal Submissions will demonstrate
@@ -23,8 +23,7 @@ Feel free to use as many classes/nested classes as you find necessary to come to
 3.  Knowledge of File parsing, working with Strings, and type conversion.
 4.  Knowledge of database creation, insertion, and querying.  Any optimizations performed here are always a plus.
 5.  Use of a Shared Preferences object to persist global application state.
-6.  Useage of a ListView, Adapter, and user feedback while no results are present (was it an empty search, are
-    we parsing and storing the database, are we loading results?)
+6.  Useage of a ListView, Adapter, and user feedback while no results are present.
 7.  Usaging of an SQL statement to query search results for both partial and exact textual matches.  Results should be queried through a ContentResolver, and the number of results, as well as the results themselves should be displayed.  
 
 
