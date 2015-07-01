@@ -23,7 +23,7 @@ Feel free to use as many classes/nested classes as you find necessary to come to
 3.  Knowledge of File parsing, working with Strings, and type conversion.
 4.  Knowledge of database creation, insertion, and querying.  Any optimizations performed here are always a plus.
 5.  Use of a Shared Preferences object to persist global application state.
-6.  Useage of a ListView, Adapter, and user feedback while no results are present.
+6.  Useage of a ListView, Adapter, (or RecyclerView) and user feedback while no results are present.
 7.  Usaging of an SQL statement to query search results for both partial and exact textual matches.  Results should be queried through a ContentResolver, and the number of results, as well as the results themselves should be displayed.  
 
 
