@@ -22,6 +22,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <provider
+            android:authorities="com.smashingboxes.code_challenge_android"
+            android:name="com.smashingboxes.code_challenge_android.DatabaseContentProvider" >
+        </provider>
+        <service android:name=".CSVLoader"
+            android:exported="false" >
+        </service>
     </application>
 
 </manifest>
