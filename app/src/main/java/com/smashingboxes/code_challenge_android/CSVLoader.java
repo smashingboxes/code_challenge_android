@@ -1,9 +1,9 @@
 package com.smashingboxes.code_challenge_android;
 
 import android.app.IntentService;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.res.AssetManager;
-import android.database.sqlite.SQLiteDatabase;
 import android.support.v4.content.LocalBroadcastManager;
 
 import java.io.BufferedReader;
@@ -17,18 +17,18 @@ import java.io.InputStreamReader;
 public class CSVLoader extends IntentService {
 
     public CSVLoader() {
-        super("CSVLoader");
+        super(CSVLoader.class.getCanonicalName());
     }
 
     public final class Constants {
         public static final String BROADCAST_ACTION = "com.smashingboxes.code_challenge_android.BROADCAST";
         public static final String EXTENDED_DATA_STATUS = "com.smashingboxes.code_challenge_android.STATUS";
+        public static final String LOAD_COMPLETE = "com.smashingboxes.code_challenge_android.LOAD_COMPLETE";
+        public static final String ERROR_LOADING = "com.smashingboxes.code_challenge_android.ERROR_LOADING";
     }
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        DatabaseHelper databaseHelper = new DatabaseHelper(getBaseContext());
-        SQLiteDatabase sqLiteDatabase = databaseHelper.getWritableDatabase();
         AssetManager assetManager = getBaseContext().getAssets();
         boolean success = true;
         try {
@@ -41,28 +41,18 @@ public class CSVLoader extends IntentService {
             while ((line = bufferedReader.readLine()) != null) {
                 if (firstLine) {
                     firstLine = false;
-                    continue;
-                }
+                } else {
+                    values = line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)", -1);
 
-                values = line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)", -1);
-                for (int i = 2; i < 5; i++) {
-                    if (!values[i].startsWith("\"")) {
-                        values[i] = "\"" + values[i] + "\"";
-                    }
+                    ContentValues contentValues = new ContentValues();
+                    contentValues.put(MainDatabase.COLUMN_ID, values[0]);
+                    contentValues.put(MainDatabase.COLUMN_UPC, values[1]);
+                    contentValues.put(MainDatabase.COLUMN_ITEM, values[2]);
+                    contentValues.put(MainDatabase.COLUMN_MANUFACTURER, values[3]);
+                    contentValues.put(MainDatabase.COLUMN_BRAND, values[4]);
+
+                    getContentResolver().insert(DatabaseContentProvider.CONTENT_URI, contentValues);
                 }
-                String insertCommand = "insert into " + MainDatabase.TABLE_NAME + " ("
-                        + MainDatabase.COLUMN_ID + ", "
-                        + MainDatabase.COLUMN_UPC + ", "
-                        + MainDatabase.COLUMN_ITEM + ", "
-                        + MainDatabase.COLUMN_MANUFACTURER + ", "
-                        + MainDatabase.COLUMN_BRAND
-                        + ") values("
-                        + values[0] + ", "
-                        + values[1] + ", "
-                        + values[2] + ", "
-                        + values[3] + ", "
-                        + values[4] + ")";
-                sqLiteDatabase.execSQL(insertCommand);
             }
             inputStream.close();
             streamReader.close();
@@ -73,12 +63,12 @@ public class CSVLoader extends IntentService {
         }
         Intent localIntent = new Intent(Constants.BROADCAST_ACTION);
         if (success) {
-            localIntent.putExtra(Constants.EXTENDED_DATA_STATUS, "Load complete");
-            LocalBroadcastManager.getInstance(this).sendBroadcast(localIntent);
+            localIntent.putExtra(Constants.EXTENDED_DATA_STATUS, Constants.LOAD_COMPLETE);
         } else {
-            localIntent.putExtra(Constants.EXTENDED_DATA_STATUS, "Error loading data");
-            LocalBroadcastManager.getInstance(this).sendBroadcast(localIntent);
+            localIntent.putExtra(Constants.EXTENDED_DATA_STATUS, Constants.ERROR_LOADING);
         }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(localIntent);
 
     }
+
 }
