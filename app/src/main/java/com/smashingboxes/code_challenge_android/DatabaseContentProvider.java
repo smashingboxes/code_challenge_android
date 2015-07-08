@@ -81,6 +81,31 @@ public class DatabaseContentProvider extends ContentProvider {
     }
 
     @Override
+    public int bulkInsert(Uri uri, ContentValues[] contentValues) {
+        int numInserted = 0;
+        int uriType = sURIMatcher.match(uri);
+        String tableName;
+        switch (uriType) {
+            case ALL_ITEMS:
+                tableName = MainDatabase.TABLE_NAME;
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown URI: " + uri);
+        }
+        SQLiteDatabase sqLiteDatabase = databaseHelper.getWritableDatabase();
+        sqLiteDatabase.beginTransaction();
+        for (ContentValues cv : contentValues) {
+            sqLiteDatabase.insertWithOnConflict(tableName, null,
+                    cv, SQLiteDatabase.CONFLICT_IGNORE);
+            numInserted++;
+        }
+        sqLiteDatabase.setTransactionSuccessful();
+        getContext().getContentResolver().notifyChange(uri, null);
+        sqLiteDatabase.endTransaction();
+        return numInserted;
+    }
+
+    @Override
     public int delete(Uri uri, String s, String[] strings) {
         return 0;
     }

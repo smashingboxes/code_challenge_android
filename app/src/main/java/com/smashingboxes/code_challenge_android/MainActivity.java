@@ -28,6 +28,9 @@ import android.widget.ProgressBar;
 import android.widget.SearchView;
 import android.widget.TextView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+
 import java.util.ArrayList;
 
 public class MainActivity extends Activity implements SearchView.OnQueryTextListener {
@@ -41,6 +44,7 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
     public ArrayList<String> overallItems = new ArrayList<String>(); //Preserves non-queried items
     MenuItem searchMenuItem;
     private QueryTask queryTask;
+    ListViewScrollListener listViewScrollListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,7 +78,7 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
             currentItems.addAll(overallItems);
             adapter.notifyDataSetChanged();
             overallItems.clear();
-            listView.setOnScrollListener(new ListViewScrollListener());
+            listView.setOnScrollListener(listViewScrollListener);
         } else if (listView != null && View.VISIBLE == listView.getVisibility()) {
             if (overallItems.isEmpty()) {
                 overallItems.addAll(currentItems);
@@ -99,14 +103,13 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
         @Override
         public void onReceive(Context context, Intent intent) {
             String status = intent.getStringExtra(CSVLoader.Constants.EXTENDED_DATA_STATUS);
+            SharedPreferences sharedPref = MainActivity.this.getPreferences(Context.MODE_PRIVATE);
             if (CSVLoader.Constants.LOAD_COMPLETE.equals(status)) {
-                SharedPreferences sharedPref = MainActivity.this.getPreferences(Context.MODE_PRIVATE);
                 SharedPreferences.Editor editor = sharedPref.edit();
                 editor.putBoolean(getString(R.string.csv_loaded), true);
                 editor.commit();
                 loadData();
             } else {
-                SharedPreferences sharedPref = MainActivity.this.getPreferences(Context.MODE_PRIVATE);
                 SharedPreferences.Editor editor = sharedPref.edit();
                 editor.putBoolean(getString(R.string.csv_loaded), false);
                 editor.commit();
@@ -118,6 +121,29 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
     public void loadData() {
         progressBar.setVisibility(View.GONE);
         listView.setVisibility(View.VISIBLE);
+        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+        String csvData = sharedPref.getString(getString(R.string.csv_data), null);
+        if (csvData == null || csvData.isEmpty()) {
+            loadAllItemsFromDatabase();
+        } else {
+            try {
+                JSONArray csvDataArray = new JSONArray(csvData);
+                for (int i = 0; i < csvDataArray.length(); i++) {
+                    allItems.add(csvDataArray.get(i).toString());
+                    if (i <= 50) {
+                        currentItems.add(csvDataArray.get(i).toString());
+                    }
+                }
+                adapter.notifyDataSetChanged();
+            } catch (JSONException e) {
+                e.printStackTrace();
+                loadAllItemsFromDatabase();
+            }
+        }
+    }
+
+    private void loadAllItemsFromDatabase() {
+        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
         Uri uri = DatabaseContentProvider.CONTENT_URI;
         String[] projection = {MainDatabase.COLUMN_ITEM};
         Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
@@ -135,6 +161,10 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
                 } while (cursor.moveToNext());
             }
             cursor.close();
+            //Save allItems to shared prefs to avoid querying the db on startup
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.putString(getString(R.string.csv_data), new JSONArray(allItems).toString());
+            editor.commit();
         }
     }
 
@@ -167,14 +197,15 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
             }
         };
         listView.setAdapter(adapter);
-        listView.setOnScrollListener(new ListViewScrollListener());
+        listViewScrollListener = new ListViewScrollListener();
+        listView.setOnScrollListener(listViewScrollListener);
     }
 
     private void setupSearchView() {
         searchView.setSubmitButtonEnabled(false);
         searchView.setOnQueryTextListener(this);
         searchView.setIconifiedByDefault(false);
-        searchView.setQueryHint(getString(R.string.search_hint));
+        searchView.setQueryHint(getString(R.string.search_title));
         int id = searchView.getContext().getResources().getIdentifier("android:id/search_src_text", null, null);
         TextView textView = (TextView) searchView.findViewById(id);
         textView.setTextColor(Color.WHITE);
@@ -256,6 +287,7 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
                 if (cursor.moveToFirst()) {
                     do {
                         if (isCancelled()) {
+                            cursor.close();
                             return null;
                         }
                         String current = cursor.getString(cursor.getColumnIndex(MainDatabase.COLUMN_ITEM));

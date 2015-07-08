@@ -10,6 +10,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by NicholasCook on 7/1/15.
@@ -38,6 +40,7 @@ public class CSVLoader extends IntentService {
             String line;
             String[] values;
             boolean firstLine = true;
+            List<ContentValues> allItems = new ArrayList<ContentValues>();
             while ((line = bufferedReader.readLine()) != null) {
                 if (firstLine) {
                     firstLine = false;
@@ -50,10 +53,13 @@ public class CSVLoader extends IntentService {
                     contentValues.put(MainDatabase.COLUMN_ITEM, values[2]);
                     contentValues.put(MainDatabase.COLUMN_MANUFACTURER, values[3]);
                     contentValues.put(MainDatabase.COLUMN_BRAND, values[4]);
-
-                    getContentResolver().insert(DatabaseContentProvider.CONTENT_URI, contentValues);
+                    allItems.add(contentValues);
                 }
             }
+            ContentValues[] itemsToInsert = new ContentValues[allItems.size()];
+            allItems.toArray(itemsToInsert);
+            getContentResolver().bulkInsert(DatabaseContentProvider.CONTENT_URI, itemsToInsert);
+
             inputStream.close();
             streamReader.close();
             bufferedReader.close();
@@ -68,7 +74,6 @@ public class CSVLoader extends IntentService {
             localIntent.putExtra(Constants.EXTENDED_DATA_STATUS, Constants.ERROR_LOADING);
         }
         LocalBroadcastManager.getInstance(this).sendBroadcast(localIntent);
-
     }
 
 }
