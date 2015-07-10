@@ -23,10 +23,14 @@ public class CSVLoader extends IntentService {
     }
 
     public final class Constants {
-        public static final String BROADCAST_ACTION = "com.smashingboxes.code_challenge_android.BROADCAST";
-        public static final String EXTENDED_DATA_STATUS = "com.smashingboxes.code_challenge_android.STATUS";
-        public static final String LOAD_COMPLETE = "com.smashingboxes.code_challenge_android.LOAD_COMPLETE";
-        public static final String ERROR_LOADING = "com.smashingboxes.code_challenge_android.ERROR_LOADING";
+        public static final String BROADCAST_ACTION = "com.smashingboxes.code_challenge_android" +
+                ".BROADCAST";
+        public static final String EXTENDED_DATA_STATUS = "com.smashingboxes" +
+                ".code_challenge_android.STATUS";
+        public static final String LOAD_COMPLETE = "com.smashingboxes.code_challenge_android" +
+                ".LOAD_COMPLETE";
+        public static final String ERROR_LOADING = "com.smashingboxes.code_challenge_android" +
+                ".ERROR_LOADING";
     }
 
     @Override

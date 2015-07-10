@@ -15,36 +15,25 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.AbsListView;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.SearchView;
 import android.widget.TextView;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-
-import java.util.ArrayList;
-
 public class MainActivity extends Activity implements SearchView.OnQueryTextListener {
 
-    ListView listView;
     SearchView searchView;
     ProgressBar progressBar;
-    private ArrayAdapter<String> adapter;
-    public ArrayList<String> allItems = new ArrayList<String>(); //Everything in the DB
-    public ArrayList<String> currentItems = new ArrayList<String>(); //Everything currently loaded in the UI
-    public ArrayList<String> overallItems = new ArrayList<String>(); //Preserves non-queried items
+    ViewAdapter adapter;
     MenuItem searchMenuItem;
-    private QueryTask queryTask;
-    ListViewScrollListener listViewScrollListener;
+    QueryTask queryTask;
+    RecyclerView recyclerView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,13 +42,18 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
         SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
         boolean csvLoaded = sharedPref.getBoolean(getString(R.string.csv_loaded), false);
         progressBar = (ProgressBar) findViewById(R.id.loading);
-        setupListView();
+        recyclerView = (RecyclerView) findViewById(R.id.recyclerView);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        recyclerView.setLayoutManager(linearLayoutManager);
+        recyclerView.setVisibility(View.GONE);
         if (!csvLoaded) {
             Intent intent = new Intent(this, CSVLoader.class);
             startService(intent);
             IntentFilter intentFilter = new IntentFilter(CSVLoader.Constants.BROADCAST_ACTION);
             ParseStateReceiver parseStateReceiver = new ParseStateReceiver();
-            LocalBroadcastManager.getInstance(this).registerReceiver(parseStateReceiver, intentFilter);
+            LocalBroadcastManager.getInstance(this).registerReceiver(parseStateReceiver,
+                    intentFilter);
         } else {
             loadData();
         }
@@ -73,16 +67,7 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
 
     @Override
     public boolean onQueryTextChange(String query) {
-        if (TextUtils.isEmpty(query) && listView != null && View.VISIBLE == listView.getVisibility()) {
-            currentItems.clear();
-            currentItems.addAll(overallItems);
-            adapter.notifyDataSetChanged();
-            overallItems.clear();
-            listView.setOnScrollListener(listViewScrollListener);
-        } else if (listView != null && View.VISIBLE == listView.getVisibility()) {
-            if (overallItems.isEmpty()) {
-                overallItems.addAll(currentItems);
-            }
+        if (recyclerView != null && View.VISIBLE == recyclerView.getVisibility()) {
             if (queryTask == null) {
                 queryTask = new QueryTask();
             } else {
@@ -107,77 +92,43 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
             if (CSVLoader.Constants.LOAD_COMPLETE.equals(status)) {
                 SharedPreferences.Editor editor = sharedPref.edit();
                 editor.putBoolean(getString(R.string.csv_loaded), true);
-                editor.commit();
+                editor.apply();
                 loadData();
             } else {
                 SharedPreferences.Editor editor = sharedPref.edit();
                 editor.putBoolean(getString(R.string.csv_loaded), false);
-                editor.commit();
+                editor.apply();
                 displayAlertDialog();
             }
         }
     }
 
     public void loadData() {
+        setUpAdapter();
         progressBar.setVisibility(View.GONE);
-        listView.setVisibility(View.VISIBLE);
-        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
-        String csvData = sharedPref.getString(getString(R.string.csv_data), null);
-        if (csvData == null || csvData.isEmpty()) {
-            loadAllItemsFromDatabase();
-        } else {
-            try {
-                JSONArray csvDataArray = new JSONArray(csvData);
-                for (int i = 0; i < csvDataArray.length(); i++) {
-                    allItems.add(csvDataArray.get(i).toString());
-                    if (i <= 50) {
-                        currentItems.add(csvDataArray.get(i).toString());
-                    }
-                }
-                adapter.notifyDataSetChanged();
-            } catch (JSONException e) {
-                e.printStackTrace();
-                loadAllItemsFromDatabase();
-            }
-        }
+        recyclerView.setVisibility(View.VISIBLE);
     }
 
-    private void loadAllItemsFromDatabase() {
-        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
-        Uri uri = DatabaseContentProvider.CONTENT_URI;
-        String[] projection = {MainDatabase.COLUMN_ITEM};
-        Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
+    private void setUpAdapter() {
+        Cursor cursor = getAllItems();
         if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                int totalDisplayed = 0;
-                do {
-                    String current = cursor.getString(cursor.getColumnIndex(MainDatabase.COLUMN_ITEM));
-                    allItems.add(current);
-                    if (totalDisplayed < 50) {
-                        currentItems.add(current);
-                        totalDisplayed++;
-                        adapter.notifyDataSetChanged();
-                    }
-                } while (cursor.moveToNext());
-            }
-            cursor.close();
-            //Save allItems to shared prefs to avoid querying the db on startup
-            SharedPreferences.Editor editor = sharedPref.edit();
-            editor.putString(getString(R.string.csv_data), new JSONArray(allItems).toString());
-            editor.commit();
+            adapter = new ViewAdapter(cursor);
+            recyclerView.setAdapter(adapter);
         }
     }
 
     public void displayAlertDialog() {
         progressBar.setVisibility(View.GONE);
-        listView.setVisibility(View.GONE);
+        recyclerView.setVisibility(View.GONE);
         if (!this.isFinishing()) {
             new AlertDialog.Builder(this)
                     .setTitle(getString(R.string.error))
                     .setMessage(getString(R.string.loading_error))
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    .setPositiveButton(R.string.try_again, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
-                            // Do nothing
+                            Intent intent = new Intent(MainActivity.this, CSVLoader.class);
+                            startService(intent);
+                            progressBar.setVisibility(View.VISIBLE);
                         }
                     })
                     .setIcon(android.R.drawable.ic_dialog_alert)
@@ -185,65 +136,15 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
         }
     }
 
-    private void setupListView() {
-        listView = (ListView) findViewById(R.id.list);
-        listView.setVisibility(View.GONE);
-        adapter = new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_spinner_item, currentItems) {
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
-                TextView textView = (TextView) super.getView(position, convertView, parent);
-                textView.setSingleLine(false);
-                return textView;
-            }
-        };
-        listView.setAdapter(adapter);
-        listViewScrollListener = new ListViewScrollListener();
-        listView.setOnScrollListener(listViewScrollListener);
-    }
-
     private void setupSearchView() {
         searchView.setSubmitButtonEnabled(false);
         searchView.setOnQueryTextListener(this);
         searchView.setIconifiedByDefault(false);
         searchView.setQueryHint(getString(R.string.search_title));
-        int id = searchView.getContext().getResources().getIdentifier("android:id/search_src_text", null, null);
+        int id = searchView.getContext().getResources().getIdentifier("android:id/search_src_text",
+                null, null);
         TextView textView = (TextView) searchView.findViewById(id);
         textView.setTextColor(Color.WHITE);
-    }
-
-    private class ListViewScrollListener implements AbsListView.OnScrollListener {
-
-        private int visibleThreshold = 50;
-        private int currentPage = 0;
-        private int previousTotal = 0;
-        private boolean loading = true;
-
-        @Override
-        public void onScroll(AbsListView view, int firstVisibleItem,
-                             int visibleItemCount, int totalItemCount) {
-            if (loading) {
-                if (totalItemCount > previousTotal) {
-                    loading = false;
-                    previousTotal = totalItemCount;
-                    currentPage++;
-                }
-            }
-            if (!loading && (totalItemCount - visibleItemCount) <= (firstVisibleItem + visibleThreshold)) {
-                //Load the next 50 items
-                //firstScroll = false;
-                int start = 50 * currentPage;
-                for (int i = start; i <= start + 50 && i < allItems.size(); i++) {
-                    currentItems.add(allItems.get(i));
-                    adapter.notifyDataSetChanged();
-                }
-                loading = true;
-            }
-        }
-
-        @Override
-        public void onScrollStateChanged(AbsListView view, int scrollState) {
-        }
-
     }
 
     @Override
@@ -262,48 +163,56 @@ public class MainActivity extends Activity implements SearchView.OnQueryTextList
     }
 
     public Cursor getWordMatches(String query) {
-        String[] projection = new String[]{MainDatabase.COLUMN_ITEM};
-        String selection = MainDatabase.COLUMN_ITEM + " LIKE ?";
-        String[] selectionArgs = new String[]{"%" + query + "%"};
-        Cursor cursor = getContentResolver().query(DatabaseContentProvider.CONTENT_URI, projection,
-                selection, selectionArgs, null);
-        if (cursor == null) {
-            return null;
-        } else if (!cursor.moveToFirst()) {
-            cursor.close();
-            return null;
+        if (TextUtils.isEmpty(query)) {
+            return getAllItems();
+        } else {
+            String[] projection = new String[]{MainDatabase.COLUMN_ID, MainDatabase.COLUMN_ITEM};
+            String selection = MainDatabase.COLUMN_ITEM + " LIKE ?";
+            String[] selectionArgs = new String[]{"%" + query + "%"};
+            Cursor cursor = getContentResolver().query(DatabaseContentProvider.CONTENT_URI,
+                    projection,
+                    selection, selectionArgs, null);
+            if (cursor == null) {
+                return null;
+            } else if (!cursor.moveToFirst()) {
+                cursor.close();
+                return null;
+            }
+            return cursor;
         }
-        return cursor;
     }
 
-    private class QueryTask extends AsyncTask<String, Void, Void> {
+    private class QueryTask extends AsyncTask<String, Void, Cursor> {
 
         @Override
-        protected Void doInBackground(String... params) {
+        protected Cursor doInBackground(String... params) {
             String query = params[0];
-            currentItems.clear();
-            Cursor cursor = getWordMatches(query);
-            if (cursor != null) {
-                if (cursor.moveToFirst()) {
-                    do {
-                        if (isCancelled()) {
-                            cursor.close();
-                            return null;
-                        }
-                        String current = cursor.getString(cursor.getColumnIndex(MainDatabase.COLUMN_ITEM));
-                        currentItems.add(current);
-                    } while (cursor.moveToNext());
-                }
-                cursor.close();
+            if (isCancelled()) {
+                return null;
             }
-            return null;
+            Cursor cursor = getWordMatches(query);
+            if (cursor == null) {
+                return null;
+            } else if (!cursor.moveToFirst()) {
+                cursor.close();
+                return null;
+            }
+            return cursor;
         }
 
         @Override
-        protected void onPostExecute(Void v) {
-            listView.setOnScrollListener(null);
-            adapter.notifyDataSetChanged();
+        protected void onPostExecute(Cursor cursor) {
+            if (!isCancelled()) {
+                adapter.cursor = cursor;
+                adapter.notifyDataSetChanged();
+            }
         }
+    }
+
+    private Cursor getAllItems() {
+        Uri uri = DatabaseContentProvider.CONTENT_URI;
+        String[] projection = {MainDatabase.COLUMN_ID, MainDatabase.COLUMN_ITEM};
+        return getContentResolver().query(uri, projection, null, null, null);
     }
 
 }
