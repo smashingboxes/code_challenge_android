@@ -42,7 +42,7 @@ example
 
 ## Submissions
 
-Feel free to completely however much of this challenge as you feel is reasonable for your skill level.
+Feel free to complete as much of this challenge as you feel is reasonable for your skill level.
 
 Send relevant code source as .zip, tar.gz, or link to a git url accompanied with a signed .apk file to austin@smashingboxes.com.
 
