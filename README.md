@@ -13,8 +13,7 @@ The ideal application will consist of the following workflow:
 
 On the initial application startup, if assets/item.csv hasn't been parsed out and stored into a database, run a routine to do so.  If the user minimizes or closes the application, this routine should still continue until finished.  When finished, if the user is currently viewing the application, a list should be populated with all results (i.e. an empty query should display all items).  Once results are present, a menu item should be displayed to allow the user to provide a search query that will filter the list of displayed results by dispatching an additional query. Note:  Query strings should filter on the "Item Description" column of the CSV.
 
-Feel free to use as many Classes/Nested Classes, relevant external gradle libraries, etc that you find necessary to come to a solution.  Please contact me at austin@smashingboxes.com if you have any questions on libraries we use.
-
+Feel free to use as many Classes/Nested Classes, relevant external gradle libraries, etc that you find necessary to come to a solution.  
 
 ## Ideal Submissions will demonstrate
 
@@ -44,5 +43,5 @@ example
 
 Feel free to complete as much of this challenge as you feel is reasonable for your skill level.
 
-Send relevant code source as .zip, tar.gz, or link to a git url accompanied with a signed .apk file to austin@smashingboxes.com.
+Send relevant code source as .zip, tar.gz, or link to a git url accompanied with a signed .apk file to anya@smashingboxes.com.
 
