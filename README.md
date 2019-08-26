@@ -43,5 +43,5 @@ example
 
 Feel free to complete as much of this challenge as you feel is reasonable for your skill level.
 
-Send relevant code source as .zip, tar.gz, or link to a git url accompanied with a signed .apk file to anya@smashingboxes.com.
+Send relevant code source as .zip, tar.gz, or link to a git url accompanied with a signed .apk file to matt.wood@smashingboxes.com.
 
